@@ -2,7 +2,36 @@
 #include "gtest/gtest-spi.h"
 #include "../modules/circular_buffer.hpp"
 
-TEST(circular_buffer, constructors){
+TEST(constructors, default_constructor){
+    CircularBuffer buf;
+    EXPECT_ANY_THROW(buf.at(0));
+}
+
+TEST(constructors, by_capacity){
+    CircularBuffer buf(10);
+    EXPECT_NO_THROW(buf.at(0) = 15);
+    EXPECT_NO_THROW(buf.at(9) = 20);
+    EXPECT_ANY_THROW(buf.at(10) = 25);
+}
+
+TEST(constructors, by_capacity_and_item){
+    CircularBuffer buf(8, 'Z');
+    EXPECT_TRUE(buf[0] == 'Z');
+    EXPECT_TRUE(buf[7] == 'Z');
+    EXPECT_ANY_THROW(buf.at(8) == 'Z');
+}
+
+TEST(constructors, copying){
+    CircularBuffer buf1;
+    CircularBuffer buf2(5, 'a');
+    buf2[2] = 'b';
+    buf1 = buf2;
+    EXPECT_TRUE(buf1[2] == 'b');
+    buf2[3] = 'c';
+    EXPECT_TRUE(buf1[3] != 'c');
+}
+
+TEST(constructors, destructor){
     CircularBuffer buf1(10, 'd');
     EXPECT_TRUE(buf1[8] == 'd');
     {
@@ -19,18 +48,18 @@ TEST(circular_buffer, constructors){
     EXPECT_TRUE(buf1[2] != 'b');
 }
 
-TEST(circular_buffer, at){
+TEST(methods, at){
     CircularBuffer buf(7, 'a');
     buf.at(2) = 'b';
     EXPECT_TRUE(buf[2] == 'b');
 }
 
-TEST(circular_buffer, at_ERROR){
+TEST(methods, at_ERROR){
     CircularBuffer buf(3, ' ');
     EXPECT_ANY_THROW(buf.at(3));
 }
 
-TEST(circular_buffer, front_back){
+TEST(methods, front_back){
     CircularBuffer buf(7, 100);
     EXPECT_TRUE(buf.back() == buf.front());
     buf.back() = 95;
@@ -38,17 +67,17 @@ TEST(circular_buffer, front_back){
     EXPECT_TRUE(buf.back() == buf.front()-12);
 }
 
-TEST(circular_buffer, front_ERROR){
+TEST(methods, front_ERROR){
     CircularBuffer buf(0, 50);
     EXPECT_ANY_THROW(buf.front());
 }
 
-TEST(circular_buffer, back_ERROR){
+TEST(methods, back_ERROR){
     CircularBuffer buf(0, 50);
     EXPECT_ANY_THROW(value_type a = buf.back());
 }
 
-TEST(circular_buffer, push){
+TEST(methods, push){
     CircularBuffer buf(5);
     buf.push_back('a');
     buf.push_back('b');
@@ -61,12 +90,12 @@ TEST(circular_buffer, push){
     EXPECT_TRUE(buf[0] == 'A');
 }
 
-TEST(circular_buffer, push_ERROR){
+TEST(methods, push_ERROR){
     CircularBuffer buf(0);
     EXPECT_ANY_THROW(buf.push_back('a'));
 }
 
-TEST(circular_buffer, pop){
+TEST(methods, pop){
     CircularBuffer buf(7);
     buf.push_back('a');
     buf.push_back('b');
@@ -87,7 +116,7 @@ TEST(circular_buffer, pop){
     EXPECT_TRUE(buf.size() == 1);
 }
 
-TEST(circular_buffer, pop_ERROR){
+TEST(methods, pop_ERROR){
     CircularBuffer buf(4, 100);
     buf.pop_front();
     buf.pop_front();
@@ -96,7 +125,7 @@ TEST(circular_buffer, pop_ERROR){
     EXPECT_ANY_THROW(buf.pop_front());
 }
 
-TEST(circular_buffer, buffer_contents){
+TEST(methods, size){
     {
         CircularBuffer buf(7);
         buf.push_back('a');
@@ -108,10 +137,6 @@ TEST(circular_buffer, buffer_contents){
         buf.push_back('c');
         buf.push_back('d');
         EXPECT_TRUE(buf.size() == 4);
-        EXPECT_FALSE(buf.empty());
-        EXPECT_FALSE(buf.full());
-        EXPECT_TRUE(buf.reserve() == 3);
-        EXPECT_TRUE(buf.capacity() == 7);
     }
     {
         CircularBuffer buf(7);
@@ -121,28 +146,128 @@ TEST(circular_buffer, buffer_contents){
         buf.push_front('b');
         buf.push_front('a');
         EXPECT_TRUE(buf.size() == 5);
-        EXPECT_TRUE(buf.reserve() == 2);
-        EXPECT_TRUE(buf.capacity() == 7);
     }
     {
         CircularBuffer buf(5, 'a');
         EXPECT_TRUE(buf.size() == 5);
-        EXPECT_FALSE(buf.empty());
-        EXPECT_TRUE(buf.full());
-        EXPECT_TRUE(buf.reserve() == 0);
-        EXPECT_TRUE(buf.capacity() == 5);
     }
     {
         CircularBuffer buf(5);
         EXPECT_TRUE(buf.size() == 0);
+    }
+}
+
+TEST(methods, empty){
+    {
+        CircularBuffer buf(7);
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.push_back('b');
+        buf.push_back('c');
+        buf.push_back('d');
+        EXPECT_FALSE(buf.empty());
+    }
+    {
+        CircularBuffer buf(5, 'a');
+        EXPECT_FALSE(buf.empty());
+    }
+    {
+        CircularBuffer buf(5);
         EXPECT_TRUE(buf.empty());
+    }
+}
+
+TEST(methods, full){
+    {
+        CircularBuffer buf(7);
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.push_back('b');
+        buf.push_back('c');
+        buf.push_back('d');
         EXPECT_FALSE(buf.full());
+    }
+    {
+        CircularBuffer buf(5, 'a');
+        EXPECT_TRUE(buf.full());
+    }
+    {
+        CircularBuffer buf(5);
+        EXPECT_FALSE(buf.full());
+    }
+}
+
+TEST(methods, reserve){
+    {
+        CircularBuffer buf(7);
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.push_back('b');
+        buf.push_back('c');
+        buf.push_back('d');
+        EXPECT_TRUE(buf.reserve() == 3);
+    }
+    {
+        CircularBuffer buf(7);
+        buf.push_back('d');
+        buf.push_back('e');
+        buf.push_front('c');
+        buf.push_front('b');
+        buf.push_front('a');
+        EXPECT_TRUE(buf.reserve() == 2);
+    }
+    {
+        CircularBuffer buf(5, 'a');
+        EXPECT_TRUE(buf.reserve() == 0);
+    }
+    {
+        CircularBuffer buf(5);
         EXPECT_TRUE(buf.reserve() == 5);
+    }
+}
+
+TEST(methods, capacity){
+    {
+        CircularBuffer buf(7);
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.pop_front();
+        buf.push_back('a');
+        buf.push_back('b');
+        buf.push_back('c');
+        buf.push_back('d');
+        EXPECT_TRUE(buf.capacity() == 7);
+    }
+    {
+        CircularBuffer buf(7);
+        buf.push_back('d');
+        buf.push_back('e');
+        buf.push_front('c');
+        buf.push_front('b');
+        buf.push_front('a');
+        EXPECT_TRUE(buf.capacity() == 7);
+    }
+    {
+        CircularBuffer buf(5, 'a');
+        EXPECT_TRUE(buf.capacity() == 5);
+    }
+    {
+        CircularBuffer buf(5);
         EXPECT_TRUE(buf.capacity() == 5);
     }
 }
 
-TEST(circular_buffer, linearize){
+TEST(methods, linearize){
     {
         CircularBuffer buf(7);
         buf.push_back(' ');
@@ -193,7 +318,7 @@ TEST(circular_buffer, linearize){
     }
 }
 
-TEST(circular_buffer, rotate){
+TEST(methods, rotate){
     {
         CircularBuffer buf(7);
         buf[0] = 'a';
@@ -225,7 +350,7 @@ TEST(circular_buffer, rotate){
     }
 }
 
-TEST(circular_buffer, set_capacity){
+TEST(methods, set_capacity){
     CircularBuffer buf(7);
     buf.push_back('a');
     buf.push_back('b');
@@ -243,7 +368,7 @@ TEST(circular_buffer, set_capacity){
     EXPECT_ANY_THROW(buf1.at(5));
 }
 
-TEST(circular_buffer, resize){
+TEST(methods, resize){
     CircularBuffer buf(7);
     buf.push_back('a');
     buf.push_back('b');
@@ -260,7 +385,7 @@ TEST(circular_buffer, resize){
     EXPECT_TRUE(buf[3] == 'Z');
 }
 
-TEST(circular_buffer, assignment_op){
+TEST(operators, assignment_op){
     CircularBuffer buf1(8, 'a');
     buf1.push_front('c');
     buf1.push_front('b');
@@ -272,7 +397,7 @@ TEST(circular_buffer, assignment_op){
     EXPECT_TRUE(buf3.front() == 'b');
 }
 
-TEST(circular_buffer, swap){
+TEST(methods, swap){
     CircularBuffer buf1(5);
     for(int i=0; i<5; i++) buf1[i] = 'a'+i;
     CircularBuffer buf2(9);
@@ -282,7 +407,7 @@ TEST(circular_buffer, swap){
     EXPECT_TRUE(buf2[4] == 'e');
 }
 
-TEST(circular_buffer, erase){
+TEST(methods, erase){
     CircularBuffer buf(10, '1');
     buf.erase(4, 10);
     EXPECT_TRUE(buf[0] == '1');
@@ -291,7 +416,7 @@ TEST(circular_buffer, erase){
     EXPECT_TRUE(buf[9] ==  0 );
 }
 
-TEST(circular_buffer, insert){
+TEST(methods, insert){
     CircularBuffer buf(10, 'e');
     buf.pop_back();
     buf.pop_back();
@@ -302,14 +427,14 @@ TEST(circular_buffer, insert){
     EXPECT_ANY_THROW(buf.insert(11, 'N'));
 }
 
-TEST(circular_buffer, clear){
+TEST(methods, clear){
     CircularBuffer buf(8, 'Q');
     EXPECT_TRUE(buf[3] == 'Q');
     buf.clear();
     EXPECT_TRUE(buf[3] == 0);
 }
 
-TEST(circular_buffer, eq_neq){
+TEST(operators, eq_neq){
     CircularBuffer buf1(5, 'a');
     CircularBuffer buf2(5, 'a');
     EXPECT_TRUE(buf1 == buf2);
